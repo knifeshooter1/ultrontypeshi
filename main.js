@@ -80,7 +80,7 @@ function initThree() {
 
   // Camera
   const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
-  camera.position.set(0, 0.2, 5.5);
+  camera.position.set(0, 1.2, 1.8);
 
   // Renderer
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -182,7 +182,7 @@ function initThree() {
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  gltfLoader.load('/Hitem3d-17775310527.glb', (gltf) => {
+  gltfLoader.load('/Hitem3d-17775310511.glb', (gltf) => {
     const model = gltf.scene;
 
     // Center model
@@ -254,15 +254,19 @@ function initThree() {
   const scrollWrap = document.getElementById('scroll-wrap');
   let currentSection = 0;
 
-  // Camera positions per section
+  // Camera positions per section - Close up -> Zoom out progression
   const camStates = [
-    { pos: new THREE.Vector3(0, 0.2, 5.5),  lookAt: new THREE.Vector3(0, 0, 0),  modelX:  0.3, modelY: 0,    modelRY: 0 },
-    { pos: new THREE.Vector3(2.5, 0.5, 4.5), lookAt: new THREE.Vector3(0.5, 0, 0), modelX: -0.5, modelY: 0.1, modelRY: 0.3 },
-    { pos: new THREE.Vector3(-2, 0.3, 5),    lookAt: new THREE.Vector3(-0.5, 0, 0), modelX:  0.4, modelY:-0.1, modelRY:-0.3 },
-    { pos: new THREE.Vector3(0, -0.3, 4.5),  lookAt: new THREE.Vector3(0,-0.2, 0), modelX:  0,   modelY: 0,   modelRY: 0 },
+    // Close up of face
+    { pos: new THREE.Vector3(0, 1.2, 1.8),   lookAt: new THREE.Vector3(0, 1.2, 0),  modelX: 0.3,  modelY: 0,    modelRY: -0.15 },
+    // Upper body (orbit right)
+    { pos: new THREE.Vector3(1.8, 0.6, 3.5), lookAt: new THREE.Vector3(0, 0.4, 0),  modelX: -0.4, modelY: 0,    modelRY: 0.2 },
+    // Full model (orbit left, zoom further)
+    { pos: new THREE.Vector3(-1.8, 0.1, 5.0),lookAt: new THREE.Vector3(0, 0.1, 0),  modelX: 0.35, modelY: -0.2, modelRY: -0.25 },
+    // Stable hero composition
+    { pos: new THREE.Vector3(0, -0.2, 5.8),  lookAt: new THREE.Vector3(0, 0.2, 0),  modelX: -0.3, modelY: 0,    modelRY: 0 },
   ];
-  const camTarget = { x: 0, y: 0.2, z: 5.5 };
-  const lookTarget = { x: 0, y: 0, z: 0 };
+  const camTarget = { x: 0, y: 1.2, z: 1.8 };
+  const lookTarget = { x: 0, y: 1.2, z: 0 };
 
   function setupScrollDrive() {
     scrollWrap.addEventListener('scroll', () => {
