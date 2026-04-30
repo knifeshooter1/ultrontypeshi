@@ -1,0 +1,18 @@
+{
+  "name": "ultron-interface",
+  "version": "1.0.0",
+  "description": "Futuristic UI with 3D model",
+  "main": "main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "three": "^0.164.0"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}
