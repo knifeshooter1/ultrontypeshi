@@ -1,313 +1,415 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader }  from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import gsap from 'gsap';
 
-// SCENE SETUP
-const container = document.getElementById('canvas-container');
-const scene = new THREE.Scene();
+/* ============================================================
+   ULTRON OS v4.0 — MAIN SCRIPT
+   ============================================================ */
 
-scene.background = new THREE.Color(0x020202);
-scene.fog = new THREE.FogExp2(0x020202, 0.05);
+// ── CUSTOM CURSOR ──────────────────────────────────────────────
+const cursorDot  = document.createElement('div'); cursorDot.id  = 'cursor-dot';
+const cursorRing = document.createElement('div'); cursorRing.id = 'cursor-ring';
+document.body.append(cursorDot, cursorRing);
 
-const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 0, 5);
-
-const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-container.appendChild(renderer.domElement);
-
-// LIGHTING - Cinematic Red & Chrome highlights
-const ambientLight = new THREE.AmbientLight(0xffffff, 0.1);
-scene.add(ambientLight);
-
-// Primary Red Light (Underglow/Core)
-const redLight = new THREE.PointLight(0xff003c, 5, 10);
-redLight.position.set(0, -1, 1);
-scene.add(redLight);
-
-// Rim Light 1 (Cyan/White cool contrast)
-const rimLight1 = new THREE.SpotLight(0x88ccff, 3);
-rimLight1.position.set(5, 5, -5);
-rimLight1.lookAt(0, 0, 0);
-rimLight1.penumbra = 1;
-scene.add(rimLight1);
-
-// Rim Light 2 (Deep Red)
-const rimLight2 = new THREE.SpotLight(0xff0000, 4);
-rimLight2.position.set(-5, 2, -3);
-rimLight2.lookAt(0, 0, 0);
-rimLight2.penumbra = 1;
-scene.add(rimLight2);
-
-// Fill Light (Soft White)
-const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-fillLight.position.set(0, 2, 5);
-scene.add(fillLight);
-
-// LOAD MODEL
-let model;
-let mixer;
-
-const loadingManager = new THREE.LoadingManager();
-const gltfLoader = new GLTFLoader(loadingManager);
-
-const dracoLoader = new DRACOLoader();
-dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
-gltfLoader.setDRACOLoader(dracoLoader);
-
-// Using a basic HDR generation trick
-const envScene = new THREE.Scene();
-const envCamera = new THREE.CubeCamera(0.1, 100, new THREE.WebGLCubeRenderTarget(256));
-const envLight1 = new THREE.PointLight(0xffffff, 10);
-envLight1.position.set(10, 10, 10);
-envScene.add(envLight1);
-const envLight2 = new THREE.PointLight(0xff003c, 20);
-envLight2.position.set(-10, -10, -10);
-envScene.add(envLight2);
-envCamera.update(renderer, envScene);
-scene.environment = envCamera.renderTarget.texture;
-
-gltfLoader.load('/Hitem3d-1777529944927.glb', (gltf) => {
-    model = gltf.scene;
-    
-    const box = new THREE.Box3().setFromObject(model);
-    const center = box.getCenter(new THREE.Vector3());
-    model.position.sub(center);
-    
-    const group = new THREE.Group();
-    group.add(model);
-    scene.add(group);
-    
-    group.scale.set(1.5, 1.5, 1.5);
-    group.position.set(1.5, -0.5, 0); // Offset to the right
-
-    model.traverse((child) => {
-        if (child.isMesh) {
-            child.castShadow = true;
-            child.receiveShadow = true;
-            if (child.material) {
-                child.material.envMapIntensity = 1.5;
-                child.material.needsUpdate = true;
-                
-                if (child.material.emissive && child.material.emissive.r > 0) {
-                    child.material.emissiveIntensity = 2;
-                }
-            }
-        }
-    });
-
-    if (gltf.animations && gltf.animations.length) {
-        mixer = new THREE.AnimationMixer(model);
-        const action = mixer.clipAction(gltf.animations[0]);
-        action.play();
-    }
-
-    setupScrollAnimations(group);
-    
-}, undefined, (error) => {
-    console.error('An error happened', error);
+let mx = 0, my = 0;
+document.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  cursorDot.style.left  = mx + 'px';
+  cursorDot.style.top   = my + 'px';
+  cursorRing.style.left = mx + 'px';
+  cursorRing.style.top  = my + 'px';
 });
 
+document.querySelectorAll('a, button, .protocol-item, .nav-link').forEach(el => {
+  el.addEventListener('mouseenter', () => cursorRing.classList.add('hover'));
+  el.addEventListener('mouseleave', () => cursorRing.classList.remove('hover'));
+});
 
-// Particles
-const particlesGeometry = new THREE.BufferGeometry();
-const particlesCount = 500;
-const posArray = new Float32Array(particlesCount * 3);
+// ── RED SCAN SWEEP ────────────────────────────────────────────
+const sweepEl = document.createElement('div');
+sweepEl.className = 'scan-sweep';
+document.body.appendChild(sweepEl);
 
-for(let i = 0; i < particlesCount * 3; i++) {
-    posArray[i] = (Math.random() - 0.5) * 15;
+// ── BOOT SEQUENCE ─────────────────────────────────────────────
+const bootScreen  = document.getElementById('boot-screen');
+const bootLines   = document.querySelectorAll('.boot-line');
+const bootBar     = document.getElementById('boot-bar');
+const siteWrapper = document.getElementById('site-wrapper');
+
+function runBoot() {
+  const bootText = document.getElementById('boot-text');
+  
+  // Add a slight delay then start flickering
+  setTimeout(() => {
+    bootText.classList.add('visible');
+  }, 200);
+
+  // Reveal site after boot
+  setTimeout(() => {
+    gsap.to(bootScreen, {
+      opacity: 0,
+      duration: 1.5,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        bootScreen.style.display = 'none';
+        siteWrapper.classList.remove('hidden');
+        requestAnimationFrame(() => {
+          siteWrapper.classList.add('revealed');
+          // Activate first section
+          document.querySelectorAll('.section')[0]?.classList.add('visible');
+          initThree();
+        });
+      }
+    });
+  }, 2500);
 }
 
-particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-const particlesMaterial = new THREE.PointsMaterial({
-    size: 0.02,
-    color: 0xff003c,
+runBoot();
+
+// ── THREE.JS SETUP ─────────────────────────────────────────────
+function initThree() {
+  const canvas = document.getElementById('three-canvas');
+
+  // Scene
+  const scene = new THREE.Scene();
+  scene.background = null; // transparent — CSS body handles bg
+
+  // Fog for depth
+  scene.fog = new THREE.FogExp2(0x040404, 0.055);
+
+  // Camera
+  const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(0, 0.2, 5.5);
+
+  // Renderer
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.4;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  // ── LIGHTING ─────────────────────────────────────────────────
+
+  // Ambient — very dark, keeps deep shadows
+  const ambient = new THREE.AmbientLight(0x080808, 1);
+  scene.add(ambient);
+
+  // Key light — cold white from slight upper-left
+  const keyLight = new THREE.DirectionalLight(0xc8d8ff, 1.8);
+  keyLight.position.set(-3, 4, 3);
+  keyLight.castShadow = true;
+  scene.add(keyLight);
+
+  // Red fill — under and front, the iconic Ultron glow
+  const redPoint = new THREE.PointLight(0xff0022, 8, 8);
+  redPoint.position.set(0, -1.5, 2);
+  scene.add(redPoint);
+
+  // Red rim — behind, left
+  const rimRed = new THREE.SpotLight(0xff0033, 10);
+  rimRed.position.set(-4, 1, -3);
+  rimRed.penumbra = 0.8;
+  rimRed.angle = 0.5;
+  rimRed.castShadow = false;
+  scene.add(rimRed);
+  rimRed.target.position.set(0, 0, 0);
+  scene.add(rimRed.target);
+
+  // Subtle blue-chrome rim — right side for metallic pop
+  const rimBlue = new THREE.SpotLight(0x4488cc, 3.5);
+  rimBlue.position.set(5, 2, -2);
+  rimBlue.penumbra = 1;
+  rimBlue.angle = 0.6;
+  scene.add(rimBlue);
+  rimBlue.target.position.set(0, 0, 0);
+  scene.add(rimBlue.target);
+
+  // Floor bounce red
+  const floorLight = new THREE.PointLight(0xff0011, 3, 6);
+  floorLight.position.set(0, -3, 0);
+  scene.add(floorLight);
+
+  // ── ENVIRONMENT MAP (metallic reflections) ────────────────────
+  const pmremGen = new THREE.PMREMGenerator(renderer);
+  pmremGen.compileEquirectangularShader();
+
+  // Build a simple hand-crafted env from colored lights in a small scene
+  const envScene = new THREE.Scene();
+  const envLights = [
+    { color: 0xffffff, intensity: 5, pos: [10, 10, 10] },
+    { color: 0xff0033, intensity: 15, pos: [-8, -5, -8] },
+    { color: 0x2244aa, intensity: 8, pos: [8, 2, -6] },
+  ];
+  envLights.forEach(l => {
+    const pl = new THREE.PointLight(l.color, l.intensity);
+    pl.position.set(...l.pos);
+    envScene.add(pl);
+  });
+  envScene.add(new THREE.AmbientLight(0x111111, 2));
+  const cubeRT = new THREE.WebGLCubeRenderTarget(256);
+  const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
+  envScene.add(cubeCam);
+  cubeCam.update(renderer, envScene);
+  scene.environment = cubeRT.texture;
+
+  // ── PARTICLES ─────────────────────────────────────────────────
+  const pCount = 400;
+  const pGeo = new THREE.BufferGeometry();
+  const pPos = new Float32Array(pCount * 3);
+  for (let i = 0; i < pCount * 3; i++) pPos[i] = (Math.random() - 0.5) * 18;
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  const pMat = new THREE.PointsMaterial({
+    size: 0.025,
+    color: 0xff0033,
     transparent: true,
-    opacity: 0.4,
-    blending: THREE.AdditiveBlending
-});
+    opacity: 0.35,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const particles = new THREE.Points(pGeo, pMat);
+  scene.add(particles);
 
-const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-scene.add(particlesMesh);
+  // ── LOAD MODEL ────────────────────────────────────────────────
+  let modelGroup = null;
+  let modelMixer = null;
 
-// RESIZE HANDLER
-window.addEventListener('resize', () => {
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/');
+
+  const gltfLoader = new GLTFLoader();
+  gltfLoader.setDRACOLoader(dracoLoader);
+
+  gltfLoader.load('/Hitem3d-17775310527.glb', (gltf) => {
+    const model = gltf.scene;
+
+    // Center model
+    const box = new THREE.Box3().setFromObject(model);
+    const center = box.getCenter(new THREE.Vector3());
+    const size   = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    model.position.sub(center);
+
+    // Scale to consistent height
+    const targetH = 3.2;
+    const scale = targetH / maxDim;
+    model.scale.setScalar(scale);
+
+    // Material boost
+    model.traverse(child => {
+      if (!child.isMesh) return;
+      child.castShadow = true;
+      child.receiveShadow = true;
+      const mat = child.material;
+      if (!mat) return;
+      if (Array.isArray(mat)) {
+        mat.forEach(m => boostMat(m));
+      } else {
+        boostMat(mat);
+      }
+    });
+
+    function boostMat(m) {
+      m.envMapIntensity = 2.0;
+      m.needsUpdate = true;
+      // Boost any emissive eyes / accents
+      if (m.emissive && (m.emissive.r > 0.2 || (m.emissiveMap))) {
+        m.emissive.set(0xff0022);
+        m.emissiveIntensity = 3;
+      }
+    }
+
+    // Wrap in group for isolated transforms
+    modelGroup = new THREE.Group();
+    modelGroup.add(model);
+    modelGroup.position.set(0, 0, 0);
+    scene.add(modelGroup);
+
+    // Handle animations
+    if (gltf.animations?.length) {
+      modelMixer = new THREE.AnimationMixer(model);
+      gltf.animations.forEach(clip => {
+        modelMixer.clipAction(clip).play();
+      });
+    }
+
+    // Fade model in
+    model.traverse(c => {
+      if (!c.isMesh) return;
+      const mats = Array.isArray(c.material) ? c.material : [c.material];
+      mats.forEach(m => {
+        m.transparent = true;
+        m.opacity = 0;
+        gsap.to(m, { opacity: 1, duration: 2, delay: 0.5, ease: 'power2.out' });
+      });
+    });
+
+    setupScrollDrive();
+  });
+
+  // ── SCROLL-DRIVEN CAMERA & MODEL ─────────────────────────────
+  const sections = Array.from(document.querySelectorAll('.section'));
+  const scrollWrap = document.getElementById('scroll-wrap');
+  let currentSection = 0;
+
+  // Camera positions per section
+  const camStates = [
+    { pos: new THREE.Vector3(0, 0.2, 5.5),  lookAt: new THREE.Vector3(0, 0, 0),  modelX:  0.3, modelY: 0,    modelRY: 0 },
+    { pos: new THREE.Vector3(2.5, 0.5, 4.5), lookAt: new THREE.Vector3(0.5, 0, 0), modelX: -0.5, modelY: 0.1, modelRY: 0.3 },
+    { pos: new THREE.Vector3(-2, 0.3, 5),    lookAt: new THREE.Vector3(-0.5, 0, 0), modelX:  0.4, modelY:-0.1, modelRY:-0.3 },
+    { pos: new THREE.Vector3(0, -0.3, 4.5),  lookAt: new THREE.Vector3(0,-0.2, 0), modelX:  0,   modelY: 0,   modelRY: 0 },
+  ];
+  const camTarget = { x: 0, y: 0.2, z: 5.5 };
+  const lookTarget = { x: 0, y: 0, z: 0 };
+
+  function setupScrollDrive() {
+    scrollWrap.addEventListener('scroll', () => {
+      const st = scrollWrap.scrollTop;
+      const wh = window.innerHeight;
+      const idx = Math.round(st / wh);
+      const clampedIdx = Math.max(0, Math.min(sections.length - 1, idx));
+
+      // Section visibility
+      sections.forEach((s, i) => {
+        const panelTop = i * wh;
+        if (st >= panelTop - wh * 0.5 && st < panelTop + wh * 0.5) {
+          s.classList.add('visible');
+          updateNav(i);
+        }
+      });
+
+      // Camera drift on scroll
+      if (clampedIdx !== currentSection || true) {
+        const st_ = camStates[clampedIdx] || camStates[0];
+        gsap.to(camTarget, {
+          x: st_.pos.x, y: st_.pos.y, z: st_.pos.z,
+          duration: 1.6, ease: 'power3.out', overwrite: 'auto'
+        });
+        gsap.to(lookTarget, {
+          x: st_.lookAt.x, y: st_.lookAt.y, z: st_.lookAt.z,
+          duration: 1.6, ease: 'power3.out', overwrite: 'auto'
+        });
+
+        // Model reposition
+        if (modelGroup) {
+          gsap.to(modelGroup.position, {
+            x: st_.modelX, y: st_.modelY,
+            duration: 1.8, ease: 'power3.out', overwrite: 'auto'
+          });
+          gsap.to(modelGroup.rotation, {
+            y: st_.modelRY,
+            duration: 1.8, ease: 'power3.out', overwrite: 'auto'
+          });
+        }
+
+        // Red light intensity on scroll — eyes intensify
+        const scrollRatio = clampedIdx / (sections.length - 1);
+        gsap.to(redPoint, { intensity: 8 + scrollRatio * 14, duration: 1.2, overwrite: 'auto' });
+        currentSection = clampedIdx;
+      }
+
+      // Hide scroll hint once scrolled
+      const hint = document.getElementById('scroll-hint');
+      if (st > 80) { hint.style.opacity = '0'; hint.style.pointerEvents = 'none'; }
+      else          { hint.style.opacity = '0.5'; hint.style.pointerEvents = ''; }
+    });
+  }
+
+  // ── NAV CLICK ─────────────────────────────────────────────────
+  document.querySelectorAll('.nav-link').forEach((link, i) => {
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      scrollWrap.scrollTo({ top: i * window.innerHeight, behavior: 'smooth' });
+    });
+  });
+
+  function updateNav(idx) {
+    document.querySelectorAll('.nav-link').forEach((l, i) => {
+      l.classList.toggle('active', i === idx);
+    });
+  }
+
+  // ── MOUSE TRACKING (head follows cursor) ─────────────────────
+  let normMX = 0, normMY = 0;
+  const baseModelRX = { v: 0 };
+  const baseModelRY = { v: 0 };
+
+  document.addEventListener('mousemove', e => {
+    normMX = (e.clientX / window.innerWidth  - 0.5) * 2;
+    normMY = (e.clientY / window.innerHeight - 0.5) * 2;
+  });
+
+  // ── PING BUTTON ───────────────────────────────────────────────
+  document.getElementById('ping-btn').addEventListener('click', () => {
+    const resp = document.getElementById('ping-response');
+    resp.classList.remove('hidden');
+    setTimeout(() => resp.classList.add('show'), 50);
+
+    // Dramatic red flash
+    gsap.fromTo(document.getElementById('vignette'),
+      { opacity: 1 },
+      { opacity: 0, duration: 0.8, delay: 0.1, ease: 'power2.out' }
+    );
+    gsap.to(redPoint, { intensity: 30, duration: 0.2, yoyo: true, repeat: 3, ease: 'power2.inOut' });
+  });
+
+  // ── RESIZE ────────────────────────────────────────────────────
+  window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
-});
+  });
 
-// MOUSE MOVEMENT
-let mouseX = 0;
-let mouseY = 0;
-let targetX = 0;
-let targetY = 0;
-const windowHalfX = window.innerWidth / 2;
-const windowHalfY = window.innerHeight / 2;
+  // ── ANIMATION LOOP ────────────────────────────────────────────
+  const clock = new THREE.Clock();
+  const _lookVec = new THREE.Vector3();
 
-document.addEventListener('mousemove', (event) => {
-    mouseX = (event.clientX - windowHalfX);
-    mouseY = (event.clientY - windowHalfY);
-});
-
-// SCROLL ANIMATIONS
-function setupScrollAnimations(modelGroup) {
-    const panels = document.querySelectorAll('.panel');
-    const content = document.querySelector('.content');
-
-    content.addEventListener('scroll', () => {
-        const scrollPosition = content.scrollTop;
-        const windowHeight = window.innerHeight;
-        
-        panels.forEach((panel, index) => {
-            const panelTop = index * windowHeight;
-            if (scrollPosition >= panelTop - windowHeight / 2 && scrollPosition < panelTop + windowHeight / 2) {
-                if(!panel.classList.contains('active')) {
-                    panel.classList.add('active');
-                    updateNav(index);
-                }
-            } else {
-                panel.classList.remove('active');
-            }
-        });
-    });
-
-    panels[0].classList.add('active');
-    
-    // We can calculate actual scroll bounds
-    content.addEventListener('scroll', () => {
-        // Approximate total scrollable height for 5 panels
-        const totalScroll = window.innerHeight * 4; 
-        let progress = content.scrollTop / totalScroll;
-        // Clamp progress
-        progress = Math.max(0, Math.min(1, progress));
-        
-        if (progress < 0.25) {
-            const p = progress / 0.25;
-            gsap.to(modelGroup.position, {
-                x: 1.5 - (p * 3), // Move from right to left
-                y: -0.5,
-                z: p * 1,
-                duration: 0.5,
-                ease: "power2.out",
-                overwrite: "auto"
-            });
-            gsap.to(modelGroup.rotation, {
-                y: p * Math.PI / 4,
-                duration: 0.5,
-                overwrite: "auto"
-            });
-        }
-        else if (progress < 0.5) {
-            const p = (progress - 0.25) / 0.25;
-            gsap.to(modelGroup.position, {
-                x: -1.5 + (p * 1.5), // Center
-                y: -0.5 - (p * 0.5), // slightly down
-                z: 1 - (p * 0.5),
-                duration: 0.5,
-                ease: "power2.out",
-                overwrite: "auto"
-            });
-            gsap.to(modelGroup.rotation, {
-                x: p * 0.2,
-                y: (Math.PI / 4) - (p * Math.PI / 4),
-                duration: 0.5,
-                overwrite: "auto"
-            });
-        }
-        else if (progress < 0.75) {
-            const p = (progress - 0.5) / 0.25;
-            gsap.to(modelGroup.position, {
-                x: 0 + (p * 1.5), // Right
-                y: -1.0 + (p * 0.5),
-                z: 0.5 + (p * 1.5), // Closer
-                duration: 0.5,
-                ease: "power2.out",
-                overwrite: "auto"
-            });
-            gsap.to(modelGroup.rotation, {
-                y: -p * Math.PI / 6,
-                duration: 0.5,
-                overwrite: "auto"
-            });
-        }
-        else {
-            const p = (progress - 0.75) / 0.25;
-            gsap.to(modelGroup.position, {
-                x: 1.5 - (p * 1.5), // Center
-                y: -0.5,
-                z: 2 - (p * 1), // Step back
-                duration: 0.5,
-                ease: "power2.out",
-                overwrite: "auto"
-            });
-            gsap.to(modelGroup.rotation, {
-                x: 0,
-                y: (-Math.PI / 6) + (p * Math.PI / 6),
-                duration: 0.5,
-                overwrite: "auto"
-            });
-        }
-    });
-
-    const navLinks = document.querySelectorAll('.nav-links a');
-    navLinks.forEach((link, index) => {
-        link.addEventListener('click', (e) => {
-            e.preventDefault();
-            content.scrollTo({
-                top: index * window.innerHeight,
-                behavior: 'smooth'
-            });
-        });
-    });
-}
-
-function updateNav(index) {
-    const navLinks = document.querySelectorAll('.nav-links a');
-    navLinks.forEach(link => link.classList.remove('active'));
-    if(navLinks[index]) {
-        navLinks[index].classList.add('active');
-    }
-}
-
-// ANIMATION LOOP
-const clock = new THREE.Clock();
-
-function animate() {
+  function animate() {
     requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+    const t  = clock.getElapsedTime();
 
-    const delta = clock.getDelta();
-    const elapsedTime = clock.getElapsedTime();
+    if (modelMixer) modelMixer.update(dt);
 
-    if (mixer) mixer.update(delta);
+    // Idle breathing on model
+    if (modelGroup) {
+      // Breathing Y oscillation (only add, don't fight GSAP x/z)
+      modelGroup.position.y += Math.sin(t * 1.2) * 0.0006;
 
-    // Subtle breathing/idle animation
-    if (model && !mixer) {
-        // Find group to not overwrite the GSAP position animations
-        model.position.y = Math.sin(elapsedTime * 1.5) * 0.05;
+      // Subtle head tracking toward cursor — smooth lerp
+      const targetRX = normMY * 0.12;
+      const targetRY = normMX * 0.18 + (modelGroup.rotation.y || 0) * 0.2;
+      modelGroup.rotation.x += (targetRX - modelGroup.rotation.x) * 0.04;
+      // Only apply mouse Y to x rotation, preserve GSAP Y
+      // Use a small sub-layer for face tracking
+      baseModelRX.v += (normMY * 0.1 - baseModelRX.v) * 0.04;
+      baseModelRY.v += (normMX * 0.14 - baseModelRY.v) * 0.04;
+      modelGroup.rotation.x = baseModelRX.v;
     }
 
-    particlesMesh.rotation.y = elapsedTime * 0.02;
-    particlesMesh.rotation.x = elapsedTime * 0.01;
+    // Slow camera orbit drift (very subtle, layer on top of GSAP)
+    const driftX = Math.sin(t * 0.15) * 0.08;
+    const driftY = Math.cos(t * 0.1)  * 0.04;
 
-    // Mouse parallax
-    targetX = mouseX * 0.001;
-    targetY = mouseY * 0.001;
+    camera.position.x += (camTarget.x + driftX - camera.position.x) * 0.04;
+    camera.position.y += (camTarget.y + driftY - camera.position.y) * 0.04;
+    camera.position.z += (camTarget.z            - camera.position.z) * 0.04;
 
-    camera.position.x += (targetX - camera.position.x) * 0.05;
-    camera.position.y += (-targetY - camera.position.y) * 0.05;
-    camera.lookAt(scene.position);
+    _lookVec.set(lookTarget.x, lookTarget.y, lookTarget.z);
+    camera.lookAt(_lookVec);
 
-    // Dynamic light pulsing
-    redLight.intensity = 5 + Math.sin(elapsedTime * 2) * 1.5;
+    // Pulsing red light (eyes / core glow)
+    redPoint.intensity  = redPoint.intensity  * 0.98 + (redPoint.intensity  + Math.sin(t * 3.5) * 1.5) * 0.02;
+    floorLight.intensity = 3 + Math.sin(t * 2) * 0.8;
+
+    // Rotate particles slowly
+    particles.rotation.y = t * 0.018;
+    particles.rotation.x = t * 0.009;
 
     renderer.render(scene, camera);
-}
+  }
 
-animate();
+  animate();
+}

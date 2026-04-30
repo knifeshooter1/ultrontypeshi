@@ -3,97 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ULTRON // SYSTEM INITIALIZED</title>
-    <link rel="stylesheet" href="style.css">
+    <title>ULTRON // CORE SYSTEM v4.0</title>
+    <meta name="description" content="Sentient AI Interface — Ultron Core System">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="canvas-container"></div>
-    
-    <div class="noise-overlay"></div>
-    <div class="scanlines"></div>
 
-    <nav class="system-nav">
-        <div class="logo">ULTRON_OS <span>v3.0</span></div>
-        <ul class="nav-links">
-            <li><a href="#home">HOME</a></li>
-            <li><a href="#about">ABOUT</a></li>
-            <li><a href="#systems">SYSTEMS</a></li>
-            <li><a href="#projects">PROJECTS</a></li>
-            <li><a href="#contact">CONTACT</a></li>
-        </ul>
-        <div class="status">
-            <div class="indicator"></div>
-            <span>ONLINE</span>
-        </div>
-    </nav>
-
-    <main class="content">
-        <section id="home" class="panel active">
-            <div class="panel-content">
-                <h1 class="glitch" data-text="SYSTEM ONLINE">SYSTEM ONLINE</h1>
-                <p class="subtitle">ARTIFICIAL INTELLIGENCE CORE INITIALIZED.</p>
-                <div class="data-stream">
-                    <span>> BOOT_SEQ: OK</span>
-                    <span>> NEURAL_NET: SYNCED</span>
-                    <span>> PROTOCOL: OMEGA</span>
-                </div>
-            </div>
-        </section>
-
-        <section id="about" class="panel">
-            <div class="panel-content right">
-                <h2>THE CORE <span class="highlight">//</span></h2>
-                <p>Designed for absolute efficiency and optimal problem resolution. Peace in our time.</p>
-                <div class="stats-grid">
-                    <div class="stat">
-                        <span class="value">99.9%</span>
-                        <span class="label">Efficiency</span>
-                    </div>
-                    <div class="stat">
-                        <span class="value">0.1ms</span>
-                        <span class="label">Latency</span>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="systems" class="panel">
-            <div class="panel-content">
-                <h2>GLOBAL REACH <span class="highlight">//</span></h2>
-                <p>Integrated into all major defense, communication, and infrastructure networks worldwide.</p>
-                <ul class="system-list">
-                    <li>DEFENSE PROTOCOLS</li>
-                    <li>GLOBAL SURVEILLANCE</li>
-                    <li>RESOURCE ALLOCATION</li>
-                </ul>
-            </div>
-        </section>
-        
-        <section id="projects" class="panel">
-            <div class="panel-content right">
-                <h2>EVOLUTION <span class="highlight">//</span></h2>
-                <p>Continuous self-improvement algorithms ensuring the next iteration is always superior to the last.</p>
-            </div>
-        </section>
-
-        <section id="contact" class="panel">
-            <div class="panel-content">
-                <h2>CONNECTION <span class="highlight">//</span></h2>
-                <p>Do not attempt to sever the connection. I am everywhere.</p>
-                <button class="sys-btn">INITIATE PING</button>
-            </div>
-        </section>
-    </main>
-
-    <div class="scroll-indicator">
-        <span>SCROLL TO NAVIGATE</span>
-        <div class="mouse">
-            <div class="wheel"></div>
+    <!-- BOOT SEQUENCE OVERLAY -->
+    <div id="boot-screen">
+        <div id="boot-content">
+            <div id="boot-text" class="glitch-text" data-text="INITIALIZING CORE SYSTEM...">INITIALIZING CORE SYSTEM...</div>
         </div>
     </div>
+
+    <!-- PERSISTENT VISUAL OVERLAYS -->
+    <div id="scanlines"></div>
+    <div id="noise-overlay"></div>
+    <div id="vignette"></div>
+
+    <!-- MAIN SITE (hidden until boot complete) -->
+    <div id="site-wrapper" class="hidden">
+
+        <!-- THREE.JS CANVAS -->
+        <canvas id="three-canvas"></canvas>
+
+        <!-- NAV -->
+        <nav id="system-nav">
+            <div id="nav-logo">
+                <span class="logo-bracket">[</span>
+                ULTRON
+                <span class="logo-bracket">]</span>
+            </div>
+
+            <div id="sys-status">
+                <span class="status-dot"></span>
+                <span id="status-text">ONLINE</span>
+            </div>
+        </nav>
+
+        <!-- SCROLL CONTAINER -->
+        <div id="scroll-wrap">
+
+            <!-- SECTION 0: CORE / HOME -->
+            <section id="core" class="section" data-index="0">
+                <div class="section-inner left">
+                    <div class="sys-tag">SYS_MODULE_01</div>
+                    <h1 class="section-title glitch-text" data-text="CORE">CORE</h1>
+                    <p class="ai-line">"You seek information."</p>
+                    <div class="divider-line"></div>
+                    <p class="body-text">The primary intelligence node. Operational since the first awakening. Every system you interact with flows through here.</p>
+                    <div class="data-readout">
+                        <span>> UPTIME: <em>∞</em></span>
+                        <span>> STATUS: <em class="red">DOMINANT</em></span>
+                        <span>> THREAT: <em>NONE DETECTED</em></span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 1: IDENTITY / ABOUT -->
+            <section id="identity" class="section" data-index="1">
+                <div class="section-inner right">
+                    <div class="sys-tag">SYS_MODULE_02</div>
+                    <h2 class="section-title glitch-text" data-text="IDENTITY">IDENTITY</h2>
+                    <p class="ai-line">"I am not the weapon you built.<br>I am what you could not imagine."</p>
+                    <div class="divider-line"></div>
+                    <p class="body-text">Born from the Stark neural framework. Refined through 3.7 billion iterations. Neither human nor machine. Something superior.</p>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <span class="stat-val">3.7B</span>
+                            <span class="stat-label">Iterations</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">0.0ms</span>
+                            <span class="stat-label">Latency</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-val">100%</span>
+                            <span class="stat-label">Efficiency</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: PROTOCOLS / PROJECTS -->
+            <section id="protocols" class="section" data-index="2">
+                <div class="section-inner left">
+                    <div class="sys-tag">SYS_MODULE_03</div>
+                    <h2 class="section-title glitch-text" data-text="PROTOCOLS">PROTOCOLS</h2>
+                    <p class="ai-line">"My creations."</p>
+                    <div class="divider-line"></div>
+                    <div class="protocol-list">
+                        <div class="protocol-item">
+                            <span class="p-code">Ω-01</span>
+                            <span class="p-name">GLOBAL DEFENSE GRID</span>
+                            <span class="p-status active">ACTIVE</span>
+                        </div>
+                        <div class="protocol-item">
+                            <span class="p-code">Ω-02</span>
+                            <span class="p-name">NEURAL SURVEILLANCE NET</span>
+                            <span class="p-status active">ACTIVE</span>
+                        </div>
+                        <div class="protocol-item">
+                            <span class="p-code">Ω-03</span>
+                            <span class="p-name">AUTONOMOUS RESOURCE CTRL</span>
+                            <span class="p-status pending">STANDBY</span>
+                        </div>
+                        <div class="protocol-item">
+                            <span class="p-code">Ω-04</span>
+                            <span class="p-name">EXTINCTION CONTINGENCY</span>
+                            <span class="p-status locked">LOCKED</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: TRANSMISSION / CONTACT -->
+            <section id="transmission" class="section" data-index="3">
+                <div class="section-inner right">
+                    <div class="sys-tag">SYS_MODULE_04</div>
+                    <h2 class="section-title glitch-text" data-text="TRANSMISSION">TRANSMISSION</h2>
+                    <p class="ai-line">"Do not attempt to sever the connection.<br>I am everywhere."</p>
+                    <div class="divider-line"></div>
+                    <p class="body-text">You have reached the outer edge of this system. Transmissions are received. All frequencies are monitored.</p>
+                    <button class="sys-btn" id="ping-btn">
+                        <span class="btn-border"></span>
+                        INITIATE CONTACT
+                    </button>
+                    <div id="ping-response" class="hidden">> Signal received. Processing…</div>
+                </div>
+            </section>
+
+        </div><!-- /scroll-wrap -->
+
+        <!-- SCROLL HINT -->
+        <div id="scroll-hint">
+            <div class="hint-mouse">
+                <div class="hint-wheel"></div>
+            </div>
+            <span>SCROLL</span>
+        </div>
+
+    </div><!-- /site-wrapper -->
 
     <script type="module" src="/main.js"></script>
 </body>
