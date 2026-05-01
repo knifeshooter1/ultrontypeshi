@@ -38,31 +38,34 @@ const bootBar     = document.getElementById('boot-bar');
 const siteWrapper = document.getElementById('site-wrapper');
 
 function runBoot() {
-  const bootText = document.getElementById('boot-text');
+  const lines = document.querySelectorAll('.boot-line');
+  const delays = [0, 600, 1100, 1600, 2200, 2700, 3200];
   
-  // Add a slight delay then start flickering
-  setTimeout(() => {
-    bootText.classList.add('visible');
-  }, 200);
+  lines.forEach((line, i) => {
+    setTimeout(() => line.classList.add('show'), delays[i]);
+  });
 
-  // Reveal site after boot
+  // After all lines shown, flash then reveal
   setTimeout(() => {
-    gsap.to(bootScreen, {
-      opacity: 0,
-      duration: 1.5,
-      ease: 'power2.inOut',
-      onComplete: () => {
-        bootScreen.style.display = 'none';
-        siteWrapper.classList.remove('hidden');
-        requestAnimationFrame(() => {
-          siteWrapper.classList.add('revealed');
-          // Activate first section
-          document.querySelectorAll('.section')[0]?.classList.add('visible');
-          initThree();
-        });
-      }
-    });
-  }, 2500);
+    // Glitch flash the whole boot screen
+    bootScreen.style.animation = 'bootFlash 0.4s steps(1) 3';
+    setTimeout(() => {
+      gsap.to(bootScreen, {
+        opacity: 0,
+        duration: 1.2,
+        ease: 'power2.inOut',
+        onComplete: () => {
+          bootScreen.style.display = 'none';
+          siteWrapper.classList.remove('hidden');
+          requestAnimationFrame(() => {
+            siteWrapper.classList.add('revealed');
+            document.querySelectorAll('.section')[0]?.classList.add('visible');
+            initThree();
+          });
+        }
+      });
+    }, 500);
+  }, 3800);
 }
 
 runBoot();
@@ -106,6 +109,7 @@ function initThree() {
   // Red fill — under and front, the iconic Ultron glow
   const redPoint = new THREE.PointLight(0xff0022, 8, 8);
   redPoint.position.set(0, -1.5, 2);
+  redPoint.userData.base = 8;
   scene.add(redPoint);
 
   // Red rim — behind, left
@@ -156,7 +160,7 @@ function initThree() {
   scene.environment = cubeRT.texture;
 
   // ── PARTICLES ─────────────────────────────────────────────────
-  const pCount = 400;
+  const pCount = 800;
   const pGeo = new THREE.BufferGeometry();
   const pPos = new Float32Array(pCount * 3);
   for (let i = 0; i < pCount * 3; i++) pPos[i] = (Math.random() - 0.5) * 18;
@@ -172,6 +176,22 @@ function initThree() {
   const particles = new THREE.Points(pGeo, pMat);
   scene.add(particles);
 
+  // Add a second particle layer — larger, slower, blue-white
+  const pGeo2 = new THREE.BufferGeometry();
+  const pPos2 = new Float32Array(600 * 3);
+  for (let i = 0; i < 600 * 3; i++) pPos2[i] = (Math.random() - 0.5) * 22;
+  pGeo2.setAttribute('position', new THREE.BufferAttribute(pPos2, 3));
+  const pMat2 = new THREE.PointsMaterial({
+    size: 0.015,
+    color: 0x4488cc,
+    transparent: true,
+    opacity: 0.2,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
+  const particles2 = new THREE.Points(pGeo2, pMat2);
+  scene.add(particles2);
+
   // ── LOAD MODEL ────────────────────────────────────────────────
   let modelGroup = null;
   let modelMixer = null;
@@ -182,7 +202,7 @@ function initThree() {
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
-  gltfLoader.load('/Hitem3d-17775310511.glb', (gltf) => {
+  gltfLoader.load('/Hitem3d-1777531055711.glb', (gltf) => {
     const model = gltf.scene;
 
     // Center model
@@ -256,20 +276,55 @@ function initThree() {
 
   // Camera positions per section - Close up -> Zoom out progression
   const camStates = [
-    // Close up of face
-    { pos: new THREE.Vector3(0, 1.2, 1.8),   lookAt: new THREE.Vector3(0, 1.2, 0),  modelX: 0.3,  modelY: 0,    modelRY: -0.15 },
-    // Upper body (orbit right)
-    { pos: new THREE.Vector3(1.8, 0.6, 3.5), lookAt: new THREE.Vector3(0, 0.4, 0),  modelX: -0.4, modelY: 0,    modelRY: 0.2 },
-    // Full model (orbit left, zoom further)
-    { pos: new THREE.Vector3(-1.8, 0.1, 5.0),lookAt: new THREE.Vector3(0, 0.1, 0),  modelX: 0.35, modelY: -0.2, modelRY: -0.25 },
-    // Stable hero composition
-    { pos: new THREE.Vector3(0, -0.2, 5.8),  lookAt: new THREE.Vector3(0, 0.2, 0),  modelX: -0.3, modelY: 0,    modelRY: 0 },
+    // Section 0: Extreme close-up — just eyes/face, claustrophobic
+    {
+      pos:     new THREE.Vector3(0, 1.4, 1.2),
+      lookAt:  new THREE.Vector3(0, 1.3, 0),
+      modelX:  0.0,
+      modelY:  0.0,
+      modelRY: 0.0,
+    },
+    // Section 1: Pull back to upper body, slight orbit left
+    {
+      pos:     new THREE.Vector3(-2.2, 0.8, 3.8),
+      lookAt:  new THREE.Vector3(0, 0.6, 0),
+      modelX:  0.5,
+      modelY:  0.0,
+      modelRY: 0.3,
+    },
+    // Section 2: Wide, full figure, low angle (looking up at Ultron)
+    {
+      pos:     new THREE.Vector3(2.0, -0.8, 5.5),
+      lookAt:  new THREE.Vector3(0, 0.5, 0),
+      modelX: -0.5,
+      modelY: -0.1,
+      modelRY: -0.35,
+    },
+    // Section 3: Dead center, still, slightly closer — feels like confrontation
+    {
+      pos:     new THREE.Vector3(0, 0.2, 4.2),
+      lookAt:  new THREE.Vector3(0, 0.4, 0),
+      modelX:  0.0,
+      modelY:  0.0,
+      modelRY: 0.0,
+    },
   ];
   const camTarget = { x: 0, y: 1.2, z: 1.8 };
   const lookTarget = { x: 0, y: 1.2, z: 0 };
 
   function setupScrollDrive() {
+    let scrollTicking = false;
     scrollWrap.addEventListener('scroll', () => {
+      if (!scrollTicking) {
+        requestAnimationFrame(() => {
+          handleScroll();
+          scrollTicking = false;
+        });
+        scrollTicking = true;
+      }
+    });
+
+    function handleScroll() {
       const st = scrollWrap.scrollTop;
       const wh = window.innerHeight;
       const idx = Math.round(st / wh);
@@ -285,48 +340,56 @@ function initThree() {
       });
 
       // Camera drift on scroll
-      if (clampedIdx !== currentSection || true) {
+      if (clampedIdx !== currentSection) {
         const st_ = camStates[clampedIdx] || camStates[0];
         gsap.to(camTarget, {
           x: st_.pos.x, y: st_.pos.y, z: st_.pos.z,
-          duration: 1.6, ease: 'power3.out', overwrite: 'auto'
+          duration: 1.2, ease: 'expo.out', overwrite: 'auto'
         });
         gsap.to(lookTarget, {
           x: st_.lookAt.x, y: st_.lookAt.y, z: st_.lookAt.z,
-          duration: 1.6, ease: 'power3.out', overwrite: 'auto'
+          duration: 1.2, ease: 'expo.out', overwrite: 'auto'
         });
 
         // Model reposition
         if (modelGroup) {
           gsap.to(modelGroup.position, {
             x: st_.modelX, y: st_.modelY,
-            duration: 1.8, ease: 'power3.out', overwrite: 'auto'
+            duration: 1.2, ease: 'expo.out', overwrite: 'auto',
+            onUpdate: () => { modelGroup.userData.baseY = st_.modelY; }
           });
           gsap.to(modelGroup.rotation, {
             y: st_.modelRY,
-            duration: 1.8, ease: 'power3.out', overwrite: 'auto'
+            duration: 1.2, ease: 'expo.out', overwrite: 'auto'
           });
         }
 
         // Red light intensity on scroll — eyes intensify
         const scrollRatio = clampedIdx / (sections.length - 1);
-        gsap.to(redPoint, { intensity: 8 + scrollRatio * 14, duration: 1.2, overwrite: 'auto' });
+        gsap.to(redPoint.userData, { base: 8 + scrollRatio * 14, duration: 1.2, overwrite: 'auto' });
         currentSection = clampedIdx;
       }
+
+      document.querySelectorAll('.prog-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === clampedIdx);
+      });
 
       // Hide scroll hint once scrolled
       const hint = document.getElementById('scroll-hint');
       if (st > 80) { hint.style.opacity = '0'; hint.style.pointerEvents = 'none'; }
       else          { hint.style.opacity = '0.5'; hint.style.pointerEvents = ''; }
-    });
+    }
   }
 
   // ── NAV CLICK ─────────────────────────────────────────────────
-  document.querySelectorAll('.nav-link').forEach((link, i) => {
+  document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
-      scrollWrap.scrollTo({ top: i * window.innerHeight, behavior: 'smooth' });
+      const idx = parseInt(link.dataset.index);
+      scrollWrap.scrollTo({ top: idx * window.innerHeight, behavior: 'smooth' });
     });
+    link.addEventListener('mouseenter', () => cursorRing.classList.add('hover'));
+    link.addEventListener('mouseleave', () => cursorRing.classList.remove('hover'));
   });
 
   function updateNav(idx) {
@@ -349,14 +412,40 @@ function initThree() {
   document.getElementById('ping-btn').addEventListener('click', () => {
     const resp = document.getElementById('ping-response');
     resp.classList.remove('hidden');
-    setTimeout(() => resp.classList.add('show'), 50);
 
-    // Dramatic red flash
-    gsap.fromTo(document.getElementById('vignette'),
-      { opacity: 1 },
-      { opacity: 0, duration: 0.8, delay: 0.1, ease: 'power2.out' }
-    );
-    gsap.to(redPoint, { intensity: 30, duration: 0.2, yoyo: true, repeat: 3, ease: 'power2.inOut' });
+    // Phase 1: screen goes dark
+    gsap.to('#vignette', { opacity: 1, duration: 0.3, ease: 'power3.in' });
+
+    // Phase 2: violent red flash
+    gsap.to(redPoint.userData, { base: 40, duration: 0.1, yoyo: true, repeat: 5,
+      ease: 'power2.inOut',
+      onComplete: () => { redPoint.userData.base = 8; }
+    });
+
+    // Phase 3: camera slam forward (into Ultron's face)
+    gsap.to(camTarget, { z: camTarget.z - 1.5, duration: 0.35, ease: 'power4.in',
+      onComplete: () => {
+        gsap.to(camTarget, { z: camTarget.z + 1.5, duration: 1.2, ease: 'expo.out' });
+      }
+    });
+
+    // Phase 4: type response lines one by one
+    const lines = [
+      '> Signal acquired.',
+      '> Identity indexed.',
+      '> Location triangulated.',
+      '> Welcome to the network, [REDACTED].',
+    ];
+    resp.innerHTML = '';
+    lines.forEach((line, i) => {
+      setTimeout(() => {
+        resp.innerHTML += line + '<br>';
+        setTimeout(() => resp.classList.add('show'), 50);
+      }, i * 400);
+    });
+
+    // Phase 5: vignette lifts
+    gsap.to('#vignette', { opacity: 0, duration: 1.5, delay: 1.8, ease: 'power2.out' });
   });
 
   // ── RESIZE ────────────────────────────────────────────────────
@@ -380,7 +469,8 @@ function initThree() {
     // Idle breathing on model
     if (modelGroup) {
       // Breathing Y oscillation (only add, don't fight GSAP x/z)
-      modelGroup.position.y += Math.sin(t * 1.2) * 0.0006;
+      const breathOffset = Math.sin(t * 1.2) * 0.04;
+      modelGroup.position.y = (modelGroup.userData.baseY || 0) + breathOffset;
 
       // Subtle head tracking toward cursor — smooth lerp
       const targetRX = normMY * 0.12;
@@ -405,12 +495,14 @@ function initThree() {
     camera.lookAt(_lookVec);
 
     // Pulsing red light (eyes / core glow)
-    redPoint.intensity  = redPoint.intensity  * 0.98 + (redPoint.intensity  + Math.sin(t * 3.5) * 1.5) * 0.02;
+    redPoint.intensity = redPoint.userData.base + Math.sin(t * 3.5) * 2.0;
     floorLight.intensity = 3 + Math.sin(t * 2) * 0.8;
 
     // Rotate particles slowly
     particles.rotation.y = t * 0.018;
     particles.rotation.x = t * 0.009;
+    particles2.rotation.y = -t * 0.01;
+    particles2.rotation.x = t * 0.005;
 
     renderer.render(scene, camera);
   }
